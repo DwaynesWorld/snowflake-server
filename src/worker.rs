@@ -1,6 +1,7 @@
 use etcd_client::{Client, LockOptions};
 use log::info;
 use std::time::Duration;
+use tokio::time::{sleep, timeout};
 
 use crate::errors::AnyError;
 
@@ -29,7 +30,7 @@ impl LeaseWorker {
 
             let options = LockOptions::new().with_lease(lease_id);
 
-            let Ok(_) = client.lock(lock, Some(options)).await else {
+            let Ok(_) = timeout(Duration::from_secs(1), client.lock(lock, Some(options))).await else {
                 continue;
             };
 
@@ -51,7 +52,7 @@ impl LeaseWorker {
                         response.ttl()
                     );
 
-                    tokio::time::sleep(Duration::from_secs((response.ttl() / 3) as u64)).await;
+                    sleep(Duration::from_secs((response.ttl() / 3) as u64)).await;
                 }
             });
 
